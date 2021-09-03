@@ -1,0 +1,17 @@
+[package]
+name = "trusted_properties"
+version = "0.2.0"
+description = "Blockchain based decentralized prepaid-rental marketplace. Prepaid rental agreements as smart-contract."
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "trusted_properties"
+
+[features]
+no-entrypoint = []
+cpi = ["no-entrypoint"]
+
+[dependencies]
+anchor-lang = "0.14.0"
+anchor-spl = "0.14.0"
