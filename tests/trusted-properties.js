@@ -1,5 +1,6 @@
 const assert = require("assert");
 const anchor = require("@project-serum/anchor");
+const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
 
 const { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } = anchor.web3;
 
@@ -30,7 +31,7 @@ describe("trusted-properties", () => {
 		const tx_init = await program.rpc.initializeRentContract(
 			new anchor.BN(1000),		// Security deposit
 			new anchor.BN(500),			// Rent amount
-			new anchor.BN(11),			// duration
+			new anchor.BN(2),			// duration
 			new anchor.BN(10),			// start_month
 			new anchor.BN(2021),		// start_year
 			{
@@ -54,21 +55,23 @@ describe("trusted-properties", () => {
 
 		// Check it's state was initialized.
 		assert.ok(account.securityDeposit.eq(new anchor.BN(1000)));
+		assert.ok(account.duration == 2);
+		assert.ok(account.remainingPayments == 2);
 
-		let beforeBalance = (
-			await program.provider.connection.getAccountInfo(
-				rentAgreementAccount.publicKey
-			)
+		let agreementBalance = (
+			await program.provider.connection.getAccountInfo(rentAgreementAccount.publicKey)
 		).lamports;
 
 		// Store the account for the next test.
 		_rentAgreementAccount = rentAgreementAccount;
-		console.log("Account updated (security deposit): ", {
+
+		console.log("⭐ Account Created: ", {
 			account: account,
 			pubKey: _rentAgreementAccount.publicKey,
-			lamports: beforeBalance,
+			agreementBalance: agreementBalance,
 		});
 	});
+
 
 	it("Pays security-deposit to a previously created RentAgreementAccount", async () => {
 
@@ -79,13 +82,28 @@ describe("trusted-properties", () => {
 		// The program to execute.
 		const program = anchor.workspace.TrustedProperties;
 
+		let payerBeforeBalance = (
+			await program.provider.connection.getAccountInfo(provider.wallet.publicKey)
+		).lamports;
+
+		console.log("⭐ Before Transfer:: ", {
+			rentAgreementAccount: rentAgreementAccount.publicKey,
+			tenant: provider.wallet.publicKey,						// TODO: Change to tenant
+			// tenantAuthority: provider.wallet.publicKey,			// TODO: Change to tenant (?)
+			tokenProgram: TOKEN_PROGRAM_ID,
+			payerBeforeBalance: payerBeforeBalance,
+		});
+
 		// Invoke the update rpc.
 		try {
 			await program.rpc.depositSecurity(new anchor.BN(1000), {
 				accounts: {
 					rentAgreementAccount: rentAgreementAccount.publicKey,
-					tenant: provider.wallet.publicKey,
+					tenant: provider.wallet.publicKey,						// TODO: Change to tenant
+					// tenantAuthority: provider.wallet.publicKey,			// TODO: Change to tenant (?)
+					tokenProgram: SystemProgram.programId,	// TOKEN_PROGRAM_ID,
 				},
+				signers: [provider.wallet.publicKey],						// TODO: Change to tenant
 			});
 		} catch (err) {
 			console.error("[ERROR] depositSecurity: ", err);
@@ -99,18 +117,22 @@ describe("trusted-properties", () => {
 		// Check it's state was mutated.
 		assert.ok(new anchor.BN(account.status).eq(new anchor.BN(2)));
 
-		let afterBalance = (
-			await program.provider.connection.getAccountInfo(
-				_rentAgreementAccount.publicKey
-			)
+		let agreementBalance = (
+			await program.provider.connection.getAccountInfo(rentAgreementAccount.publicKey)
+		).lamports;
+		let payerAfterBalance = (
+			await program.provider.connection.getAccountInfo(provider.wallet.publicKey)
 		).lamports;
 
-		console.log("Account created: ", {
+
+		console.log("⭐ Account Updated (security deposit): ", {
 			account: account,
-			dep: account.securityDeposit.toString(),
-			dep_remaining: account.remainingSecurityDeposit.toString(),
+			dep: account?.securityDeposit?.toString(),
+			dep_remaining: account?.remainingSecurityDeposit?.toString(),
 			pubKey: _rentAgreementAccount.publicKey,
-			lamports: afterBalance,
+			agreementBalance: agreementBalance,
+			payerBeforeBalance: payerBeforeBalance,
+			payerAfterBalance: payerAfterBalance,
 		});
 
 		// #endregion update-test

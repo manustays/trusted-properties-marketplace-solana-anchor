@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-// use anchor_spl::token::{self, TokenAccount, Transfer};
+use anchor_spl::token::{self, TokenAccount, Transfer};
 use std::convert::Into;
 
 #[program]
@@ -18,6 +18,8 @@ mod trusted_properties {
 		start_month: u8,
 		start_year: u16,
 	) -> ProgramResult {
+
+		msg!("[TrustedProperties] InitializeRentContract start");
 
 		let rent_data = &mut ctx.accounts.rent_agreement_account;
 
@@ -43,6 +45,8 @@ mod trusted_properties {
 		rent_data.remaining_security_deposit = 0;
 		rent_data.duration_extension_request = 0;
 
+		msg!("[TrustedProperties] InitializeRentContract end");
+
 		Ok(())
 	}
 
@@ -51,6 +55,8 @@ mod trusted_properties {
 		ctx: Context<DepositSecurity>,
 		security_deposit_amount: u64
 	) -> ProgramResult {
+
+		msg!("TrustedProperties: DepositSecurity start");
 
 		let rent_data = &mut ctx.accounts.rent_agreement_account;
 
@@ -63,6 +69,12 @@ mod trusted_properties {
 
 		rent_data.remaining_security_deposit = security_deposit_amount;
 		rent_data.status = AgreementStatus::Active as u8;
+
+		msg!("TrustedProperties: DepositSecurity state set. Now starting transfer");
+
+		token::transfer(ctx.accounts.into(), security_deposit_amount)?;
+
+		msg!("TrustedProperties: DepositSecurity end");
 
 		Ok(())
 	}
@@ -87,7 +99,31 @@ pub struct InitializeRentContract<'info> {
 pub struct DepositSecurity<'info> {
 	#[account(mut)]
 	pub rent_agreement_account: ProgramAccount<'info, RentAgreementAccount>,
+	#[account(mut,signer)]
 	pub tenant: AccountInfo<'info>,
+	// #[account(mut,signer)]
+	// pub tenant_authority: AccountInfo<'info>,
+
+	// Misc.
+    // #[account(constraint = token_program.key == &token::ID)]
+    token_program: AccountInfo<'info>,
+}
+
+impl<'a, 'b, 'c, 'info> From<&mut DepositSecurity<'info>>
+    for CpiContext<'a, 'b, 'c, 'info, Transfer<'info>>
+{
+    fn from(accounts: &mut DepositSecurity<'info>) -> CpiContext<'a, 'b, 'c, 'info, Transfer<'info>> {
+		msg!("TrustedProperties: Account -> CpiContext start");
+        let cpi_accounts = Transfer {
+            from: accounts.tenant.clone(),
+            to: accounts.rent_agreement_account.to_account_info(),
+            authority: accounts.tenant.clone(),
+        };
+        let cpi_program = accounts.token_program.clone();
+
+		msg!("TrustedProperties: Account -> CpiContext end");
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
 }
 
 
