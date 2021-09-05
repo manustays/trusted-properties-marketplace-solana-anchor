@@ -73,6 +73,8 @@ describe("trusted-properties", () => {
 	});
 
 
+
+
 	it("Pays security-deposit to a previously created RentAgreementAccount", async () => {
 
 		const rentAgreementAccount = _rentAgreementAccount;
@@ -103,7 +105,7 @@ describe("trusted-properties", () => {
 					// tenantAuthority: provider.wallet.publicKey,			// TODO: Change to tenant (?)
 					tokenProgram: SystemProgram.programId,	// TOKEN_PROGRAM_ID,
 				},
-				signers: [provider.wallet.publicKey],						// TODO: Change to tenant
+				signers: [provider.wallet.payer],							// TODO: Change to tenant
 			});
 		} catch (err) {
 			console.error("[ERROR] depositSecurity: ", err);

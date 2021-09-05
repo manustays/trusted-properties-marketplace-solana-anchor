@@ -74,6 +74,13 @@ async function main() {
 
 	console.log("⭐ Account Created: ", {
 		account: account,
+		accounts: {
+			rentAgreementAccount: rentAgreementAccount.publicKey,
+			rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+			owner: provider.wallet.publicKey,
+			tenant: provider.wallet.publicKey,
+			systemProgram: SystemProgram.programId,
+		},
 		pubKey: rentAgreementAccount.publicKey,
 		agreementBalance: agreementBalance,
 	});
@@ -86,6 +93,7 @@ async function main() {
 	).lamports;
 
 	console.log("⭐ Before Transfer:: ", {
+		provider: provider,
 		rentAgreementAccount: rentAgreementAccount.publicKey,
 		tenant: provider.wallet.publicKey,						// TODO: Change to tenant
 		// tenantAuthority: provider.wallet.publicKey,			// TODO: Change to tenant (?)
@@ -102,7 +110,7 @@ async function main() {
 				// tenantAuthority: provider.wallet.publicKey,			// TODO: Change to tenant (?)
 				tokenProgram: SystemProgram.programId,	// TOKEN_PROGRAM_ID,
 			},
-			signers: [provider.wallet.publicKey],						// TODO: Change to tenant
+			signers: [provider.wallet.payer],						// TODO: Change to tenant
 		});
 	} catch (err) {
 		console.error("[ERROR] depositSecurity: ", err);
